@@ -138,6 +138,7 @@ export default function FinalView({ route }) {
       const contentUri = await FileSystem.getContentUriAsync(documentUrl);
       // console.log(contentUri);
       const fileType = documentUrl.split(".").pop().toLowerCase();
+      console.log("fileType", fileType);
       let intentAction = "android.intent.action.VIEW";
       let mimeType = "";
 
@@ -162,6 +163,9 @@ export default function FinalView({ route }) {
         case "mp3":
           mimeType = "audio/mpeg";
           break;
+          case "txt":
+            mimeType = "text/plain";
+            break;
         default:
           intentAction = "android.intent.action.VIEW";
           mimeType = "*/*";

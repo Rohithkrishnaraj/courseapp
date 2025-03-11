@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
   TextInput,
   FlatList,
+  Alert,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 
@@ -26,7 +27,7 @@ import RichEditor from "../RichEditor";
 import HTMLView from "react-native-htmlview";
 import PickColor from "../Utils/PickColor";
 
-export default function AddFolder({ navigation, route }) {
+export default function ContentForm({ navigation, route }) {
   const [active, setactive] = useState("Text");
   const [count, setCount] = useState(1);
   const toggle = [
@@ -52,6 +53,21 @@ export default function AddFolder({ navigation, route }) {
   const [selectedColor, setSelectedColor] = useState("bg-indigo-500");
 
   const { lessonid, isEditing, unitData } = route.params;
+
+  useEffect(() => {
+    const setupTables = async () => {
+      try {
+        await createUnitsTable();
+        await createExtrasTable();
+        console.log("Units and Extras tables created successfully");
+      } catch (error) {
+        console.error("Error creating tables:", error);
+        Alert.alert("Error", "Failed to initialize database tables");
+      }
+    };
+    
+    setupTables();
+  }, []);
 
   useEffect(() => {
     if (isEditing && unitData) {
@@ -97,11 +113,6 @@ export default function AddFolder({ navigation, route }) {
   // console.log(Image);
 
   console.log("dlfkgk", unitData?.id);
-
-  useEffect(() => {
-    createUnitsTable();
-    createExtrasTable();
-  });
 
   useEffect(() => {
     const focusHandler = navigation.addListener("focus", () => {
@@ -295,44 +306,53 @@ export default function AddFolder({ navigation, route }) {
   };
 
   const handleAddItem = async () => {
-    if (richeditortext && contentFormdata.ContentName) {
-      try {
-        const unitInsertionPromise = await insertUnit(
-          lessonid,
-          contentFormdata.ContentName.trim(),
-          richeditortext.trim(),
-          selectedColor,
-          "draft"
-        );
+    if (!richeditortext || !contentFormdata.ContentName) {
+      Alert.alert("Error", "Please enter both unit name and description");
+      return;
+    }
 
-        const imagesSavePromise = await insertMultipleExtras();
-        const audiosave = await insertMultipleAudios();
-        const filesave = await insertMultiplefiles();
+    if (!lessonid) {
+      Alert.alert("Error", "No lesson ID provided");
+      return;
+    }
 
-        const [success, imagesSuccess, audiosavesucess, FileSucess] =
-          await Promise.all([
-            unitInsertionPromise,
-            imagesSavePromise,
-            audiosave,
-            filesave,
-          ]);
+    try {
+      console.log("Creating unit with lessonId:", lessonid);
+      
+      const unitInsertionPromise = await insertUnit(
+        lessonid,
+        contentFormdata.ContentName.trim(),
+        richeditortext.trim(),
+        selectedColor,
+        "draft"
+      );
 
-        if (success && imagesSuccess & audiosavesucess && FileSucess) {
-          console.log("Unit added successfully");
-          setcontentFormdata({ ContentName: "" });
-          setricheditortext("");
-        } else {
-          console.log(
-            "Failed to add unit. Insert unit success:",
-            success,
-            ", Save images success:",
-            imagesSuccess
-          );
-        }
-      } catch (error) {
-        console.error("Error adding unit:", error);
-        throw error;
+      if (!unitInsertionPromise) {
+        throw new Error("Failed to insert unit");
       }
+
+      console.log("Unit created successfully, now adding attachments...");
+
+      const [imagesSuccess, audiosavesucess, FileSucess] = await Promise.all([
+        insertMultipleExtras(),
+        insertMultipleAudios(),
+        insertMultiplefiles(),
+      ]);
+
+      if (imagesSuccess && audiosavesucess && FileSucess) {
+        console.log("Unit and all attachments added successfully");
+        setcontentFormdata({ ContentName: "" });
+        setricheditortext("");
+        navigation.goBack();
+      } else {
+        throw new Error("Failed to add one or more attachments");
+      }
+    } catch (error) {
+      console.error("Error in handleAddItem:", error);
+      Alert.alert(
+        "Error",
+        "Failed to create unit. Please try again."
+      );
     }
   };
 

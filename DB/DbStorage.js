@@ -6,18 +6,46 @@ const db = SQLite.openDatabase("mydatabase.db");
 const createCoursesTable = async () => {
   return new Promise((resolve, reject) => {
     db.transaction((tx) => {
+      // First create the table if it doesn't exist
       tx.executeSql(
         `CREATE TABLE IF NOT EXISTS courses (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT,
           description TEXT,
           colour TEXT,
-          state TEXT,
-          category TEXT DEFAULT 'Development'
+          state TEXT
         )`,
         [],
         () => {
-          resolve();
+          // Check if category column exists
+          tx.executeSql(
+            "PRAGMA table_info(courses)",
+            [],
+            (_, { rows }) => {
+              const hasCategory = Array.from(rows._array).some(
+                (column) => column.name === 'category'
+              );
+              
+              if (!hasCategory) {
+                // Add category column if it doesn't exist
+                tx.executeSql(
+                  `ALTER TABLE courses ADD COLUMN category TEXT DEFAULT 'Development'`,
+                  [],
+                  () => {
+                    resolve();
+                  },
+                  (_, error) => {
+                    reject(error);
+                  }
+                );
+              } else {
+                resolve();
+              }
+            },
+            (_, error) => {
+              reject(error);
+            }
+          );
         },
         (_, error) => {
           reject(error);
@@ -479,6 +507,23 @@ const deleteExtra = async (id) => {
   });
 };
 
+const migrateExistingCourses = async () => {
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        `UPDATE courses SET category = 'Development' WHERE category IS NULL`,
+        [],
+        () => {
+          resolve();
+        },
+        (_, error) => {
+          reject(error);
+        }
+      );
+    });
+  });
+};
+
 export {
   createCoursesTable,
   insertCourse,
@@ -500,4 +545,5 @@ export {
   updateCourse,
   deleteUnit,
   updateUnit,
+  migrateExistingCourses,
 };

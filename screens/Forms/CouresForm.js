@@ -1,7 +1,7 @@
 import { View, Text } from "react-native";
 import React, { useState, useEffect } from "react";
 import Form from "../Utils/Form";
-import { createCoursesTable, insertCourse } from "../../DB/DbStorage";
+import { createCoursesTable, insertCourse, migrateExistingCourses } from "../../DB/DbStorage";
 
 const categories = [
   'Development',
@@ -13,8 +13,18 @@ const categories = [
 
 export default function CouresForm({ navigation, route }) {
   useEffect(() => {
-    createCoursesTable();
+    const initializeDatabase = async () => {
+      try {
+        await createCoursesTable();
+        await migrateExistingCourses();
+      } catch (error) {
+        console.error('Error initializing database:', error);
+      }
+    };
+    
+    initializeDatabase();
   }, []);
+
   const [visible, setVisible] = useState(false);
   
   const handleSave = async () => {

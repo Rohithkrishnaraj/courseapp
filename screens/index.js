@@ -15,6 +15,9 @@ import FinalView from "./FinalView"
 import QuickAdd from "./QuickAdd/QuickAdd"
 import Form from "./Utils/Form"
 import Datepicker from "./RichEditor"
+import LearningDashboard from "./LearningDashboard"
+import CourseDetails from "./CourseDetails"
+import UnitPreview from "./UnitPreview"
 
 export {
   Home,
@@ -33,5 +36,8 @@ export {
   FinalView,
   QuickAdd,
   Form,
-  Datepicker
+  Datepicker,
+  LearningDashboard,
+  CourseDetails,
+  UnitPreview,
 };

@@ -7,11 +7,18 @@ import {
   Image,
   Touchable,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import {
+  createCoursesTable,
+  createLessonsTable,
+  createUnitsTable,
+  createExtrasTable,
+} from "./DB/DbStorage";
 import {
   Home,
   Register,
@@ -24,16 +31,66 @@ import {
   LessonForm,
   ContentForm,
   FinalView,
-  Datepicker
+  Datepicker,
+  LearningDashboard,
+  CourseDetails,
+  UnitPreview,
 } from "./screens";
 
 const Stack = createNativeStackNavigator();
 
 export default function App({}) {
+  useEffect(() => {
+    const initializeDatabase = async () => {
+      try {
+        await createCoursesTable();
+        await createLessonsTable();
+        await createUnitsTable();
+        await createExtrasTable();
+        console.log("All database tables initialized successfully");
+      } catch (error) {
+        console.error("Error initializing database:", error);
+        Alert.alert(
+          "Database Error",
+          "Failed to initialize database. Please restart the app."
+        );
+      }
+    };
+
+    initializeDatabase();
+  }, []);
+
   return (
     <SafeAreaView className="w-full h-full">
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Home">
+          <Stack.Screen
+            name="Home"
+            component={Home}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="LearningDashboard"
+            component={LearningDashboard}
+            options={{
+              headerTitle: "My Learning",
+              headerShadowVisible: false,
+              headerStyle: {
+                backgroundColor: '#F9FAFB',
+              },
+            }}
+          />
+          <Stack.Screen
+            name="CourseDetails"
+            component={CourseDetails}
+            options={{
+              headerTitle: "",
+              headerShadowVisible: false,
+              headerStyle: {
+                backgroundColor: '#F9FAFB',
+              },
+            }}
+          />
           <Stack.Screen
             name="OneClick"
             component={CourseList}
@@ -75,11 +132,6 @@ export default function App({}) {
             })}
           />
           <Stack.Screen
-            name="Home"
-            component={Home}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
             name="Lesson"
             component={Lesson}
             options={{
@@ -110,6 +162,17 @@ export default function App({}) {
             name="FinalView"
             component={FinalView}
             options={{ headerTitle: "Content" }}
+          />
+          <Stack.Screen
+            name="UnitPreview"
+            component={UnitPreview}
+            options={{
+              headerTitle: "Unit Content",
+              headerShadowVisible: false,
+              headerStyle: {
+                backgroundColor: '#F9FAFB',
+              },
+            }}
           />
         </Stack.Navigator>
       </NavigationContainer>

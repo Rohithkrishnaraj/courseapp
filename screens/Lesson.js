@@ -93,11 +93,17 @@ export default function Lesson({ navigation, route }) {
   };
 
   const handleAddLesson = () => {
-    console.log("Adding lesson with courseId:", itemid);
+    console.log("=== Add Lesson Navigation ===");
+    console.log("Current itemid:", itemid);
+    console.log("Attempting to navigate to LessonForm with params:", {
+      CourseId: itemid,
+      isEditing: false
+    });
     navigation.navigate("LessonForm", {
       CourseId: itemid,
       isEditing: false
     });
+    console.log("Navigation called");
   };
 
   const renderItems = ({ item, index }) => {

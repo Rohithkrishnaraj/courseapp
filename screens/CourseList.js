@@ -10,12 +10,26 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getAllCourses, getAllLessonsForCourse } from '../DB/DbStorage';
+import { getAllCourses, getAllLessonsForCourse, createCoursesTable, migrateExistingCourses } from '../DB/DbStorage';
 import Icon from 'react-native-vector-icons/EvilIcons';
 import { AntDesign } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
+
+// Predefined gradients for courses
+const GRADIENTS = [
+  ['#FF6B6B', '#FFE66D'],
+  ['#4ECDC4', '#556270'],
+  ['#556270', '#4ECDC4'],
+  ['#5C258D', '#4389A2'],
+  ['#134E5E', '#71B280'],
+];
+
+// Get a gradient based on index
+const getGradient = (index) => {
+  return GRADIENTS[index % GRADIENTS.length];
+};
 
 const categories = [
   'All',
@@ -35,8 +49,18 @@ export default function CourseList({ navigation }) {
   const [lessonCounts, setLessonCounts] = useState({});
 
   useEffect(() => {
+    const initializeDatabase = async () => {
+      try {
+        await createCoursesTable();
+        await migrateExistingCourses();
+        fetchCourses();
+      } catch (error) {
+        console.error('Error initializing database:', error);
+      }
+    };
+
     const focusHandler = navigation.addListener('focus', () => {
-      fetchCourses();
+      initializeDatabase();
     });
     return focusHandler;
   }, [navigation]);
@@ -87,33 +111,66 @@ export default function CourseList({ navigation }) {
     setFilteredCourses(filtered);
   };
 
-  const renderCourseCard = ({ item }) => (
+  const renderCourseCard = ({ item, index }) => (
     <TouchableOpacity
-      onPress={() => navigation.navigate('Lesson', { itemid: item.id })}
-      className="mb-4"
-      style={{ width: CARD_WIDTH }}
+      onPress={() => navigation.navigate('LearningDashboard', { itemid: item.id })}
+      style={{ 
+        width: CARD_WIDTH,
+        marginBottom: 16,
+      }}
     >
       <LinearGradient
-        colors={[item.colour || '#f0f0f0', item.colour || '#e0e0e0']}
-        className="rounded-xl p-4 h-48 shadow-md"
+        colors={getGradient(index)}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
+        style={{
+          borderRadius: 12,
+          padding: 16,
+          height: 192,
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: 2,
+          },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+          elevation: 5,
+        }}
       >
-        <View className="flex-1">
-          <Text className="text-lg font-bold text-gray-800 mb-2" numberOfLines={2}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ 
+            fontSize: 18, 
+            fontWeight: 'bold',
+            color: '#FFFFFF',
+            marginBottom: 8,
+          }} numberOfLines={2}>
             {item.name}
           </Text>
-          <Text className="text-sm text-gray-600 mb-2" numberOfLines={2}>
+          <Text style={{ 
+            fontSize: 14,
+            color: '#FFFFFF',
+            opacity: 0.9,
+            marginBottom: 8,
+          }} numberOfLines={2}>
             {item.description || 'No description available'}
           </Text>
-          <View className="mt-auto flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              <AntDesign name="book" size={16} color="#4B5563" />
-              <Text className="ml-1 text-gray-600">
+          <View style={{ 
+            marginTop: 'auto',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <AntDesign name="book" size={16} color="#FFFFFF" />
+              <Text style={{ 
+                marginLeft: 4,
+                color: '#FFFFFF',
+                opacity: 0.9
+              }}>
                 {lessonCounts[item.id] || 0} Lessons
               </Text>
             </View>
-            <AntDesign name="right" size={16} color="#4B5563" />
+            <AntDesign name="right" size={16} color="#FFFFFF" />
           </View>
         </View>
       </LinearGradient>
@@ -183,14 +240,31 @@ export default function CourseList({ navigation }) {
       {/* Course Grid */}
       <FlatList
         data={filteredCourses}
-        renderItem={renderCourseCard}
+        renderItem={({ item, index }) => renderCourseCard({ item, index })}
         numColumns={2}
-        columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 24 }}
-        contentContainerStyle={{ paddingTop: 24, paddingBottom: 24 }}
+        keyExtractor={(item) => item.id.toString()}
+        columnWrapperStyle={{ 
+          justifyContent: 'space-between', 
+          paddingHorizontal: 24 
+        }}
+        contentContainerStyle={{ 
+          paddingTop: 24, 
+          paddingBottom: 24 
+        }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View className="flex-1 justify-center items-center py-8">
-            <Text className="text-gray-500 text-lg">No courses found</Text>
+          <View style={{ 
+            flex: 1, 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            paddingVertical: 32 
+          }}>
+            <Text style={{ 
+              fontSize: 16, 
+              color: '#6B7280' 
+            }}>
+              No courses found
+            </Text>
           </View>
         }
       />

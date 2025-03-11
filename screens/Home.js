@@ -118,6 +118,27 @@ const fetchLessonCounts = async () => {
       <Text className="text-lg text-gray-700 font-semibold py-2">Hey, John 👋</Text>
     </View>
 
+    {/* Action Buttons */}
+    <View className="w-full px-6 mt-8">
+
+
+      <TouchableOpacity
+        onPress={() => navigation.navigate('OneClick')}
+        className="bg-white p-4 rounded-xl shadow-md flex-row items-center justify-between"
+      >
+        <View className="flex-row items-center">
+          <View className="w-12 h-12 bg-indigo-100 rounded-full items-center justify-center mr-4">
+            <AntDesign name="home" size={24} color="#6366F1" />
+          </View>
+          <View>
+            <Text className="text-lg font-semibold text-gray-800">View Course</Text>
+            <Text className="text-sm text-gray-600">Explore course content</Text>
+          </View>
+        </View>
+        <AntDesign name="right" size={20} color="#4B5563" />
+      </TouchableOpacity>
+    </View>
+
     {/* Heading */}
     <View className="w-4/5 text-center mt-4">
       <Text className="text-3xl font-extrabold text-center text-gray-800 leading-10">

@@ -1,9 +1,13 @@
 import { View, Text, Alert } from "react-native";
 import React, { useState, useEffect } from "react";
-import Form from "../Utils/Form";
+import AddFolder from "../Utils/Form";
 import { createLessonsTable, insertLesson, updateLesson } from "../../DB/DbStorage";
 
 export default function LessonForm({ navigation, route }) {
+  console.log("=== LessonForm Mounted ===");
+  console.log("Navigation props:", navigation);
+  console.log("Route props:", route);
+  
   const [visible, setVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -14,7 +18,9 @@ export default function LessonForm({ navigation, route }) {
 
   // Debug log
   useEffect(() => {
-    console.log("LessonForm Mount - Route Params:", {
+    console.log("=== LessonForm Effect ===");
+    console.log("Component fully mounted");
+    console.log("Route Params:", {
       courseId,
       isEditing,
       lessonData,
@@ -155,8 +161,8 @@ export default function LessonForm({ navigation, route }) {
   };
 
   return (
-    <View className="">
-      <Form
+    <View className="flex-1 bg-gray-50">
+      <AddFolder
         Tittle={isEditing ? "Edit Lesson" : "Add Lesson"}
         Name="Lesson Name"
         Description="Lesson Description"
