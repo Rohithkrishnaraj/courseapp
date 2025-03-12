@@ -306,8 +306,11 @@ const UserDashboard = ({ navigation }) => {
                     {course.title}
                   </Text>
                   <Text className="text-sm text-gray-600 mb-3">
-                    {course.description}
-                  </Text>
+  {course.description.length > 50
+    ? `${course.description.substring(0, 50)}...`
+    : course.description}
+</Text>
+
                   <View className="flex-row gap-4">
                     <View className="flex-row items-center gap-1">
                       <MaterialIcons name="book" size={16} color="#666" />

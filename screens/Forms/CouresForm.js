@@ -8,7 +8,7 @@ import {
   Alert 
 } from "react-native";
 import React, { useState, useEffect } from "react";
-import { createCoursesTable, insertCourse, migrateExistingCourses } from "../../DB/DbStorage";
+import { createCoursesTable, insertCourse, migrateExistingCourses, updateCourse } from "../../DB/DbStorage";
 import PickColor from "../Utils/PickColor";
 import Dialog from "../Utils/Dialog";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -22,6 +22,9 @@ const categories = [
 ];
 
 export default function CouresForm({ navigation, route }) {
+  console.log('CouresForm: Component mounted');
+  console.log('CouresForm: Initial route params:', route.params);
+
   useEffect(() => {
     const initializeDatabase = async () => {
       try {
@@ -42,29 +45,75 @@ export default function CouresForm({ navigation, route }) {
     CourseName: "",
     CourseDescription: "",
   });
+  const [isEditing, setIsEditing] = useState(false);
+  const [courseId, setCourseId] = useState(null);
+
+  // Load existing course data if editing
+  useEffect(() => {
+    console.log('CouresForm: useEffect triggered with route params:', route.params);
+    
+    if (route.params?.courseData && route.params?.isEditing) {
+      const { courseData } = route.params;
+      console.log('CouresForm: Setting form data for editing:', courseData);
+      
+      setIsEditing(true);
+      setCourseId(courseData.id);
+      setFormdata({
+        CourseName: courseData.name || '',
+        CourseDescription: courseData.description || ''
+      });
+      setSelectedColor(courseData.colour || 'bg-indigo-500');
+      setSelectedCategory(courseData.category || 'Development');
+    }
+  }, [route.params]);
 
   const handleSave = async () => {
+    console.log('CouresForm: Starting save process');
+    console.log('CouresForm: Form data:', { Formdata, selectedColor, selectedCategory, isEditing, courseId });
+
     if (!Formdata.CourseName.trim() || !Formdata.CourseDescription.trim()) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
     
     try {
-      await insertCourse(
-        Formdata.CourseName.trim(),
-        Formdata.CourseDescription.trim(),
-        selectedColor,
-        "draft",
-        selectedCategory
-      );
-      setVisible(true);
+      if (isEditing && courseId) {
+        console.log('CouresForm: Updating existing course:', courseId);
+        
+        const result = await updateCourse(
+          courseId,
+          Formdata.CourseName.trim(),
+          Formdata.CourseDescription.trim(),
+          selectedColor,
+          "draft"
+        );
+
+        console.log('CouresForm: Update result:', result);
+        Alert.alert(
+          "Success",
+          "Course updated successfully",
+          [{ text: "OK", onPress: () => navigation.goBack() }]
+        );
+      } else {
+        console.log('CouresForm: Creating new course');
+        
+        await insertCourse(
+          Formdata.CourseName.trim(),
+          Formdata.CourseDescription.trim(),
+          selectedColor,
+          "draft",
+          selectedCategory
+        );
+        setVisible(true);
+      }
     } catch (error) {
-      console.error("Error saving course:", error);
-      Alert.alert("Error", "Failed to save course");
+      console.error("CouresForm: Error saving course:", error);
+      Alert.alert("Error", `Failed to ${isEditing ? 'update' : 'save'} course: ${error.message}`);
     }
   };
 
   const handleInputChange = (key, value) => {
+    console.log('CouresForm: Input changed:', { key, value });
     setFormdata({
       ...Formdata,
       [key]: value,
@@ -97,20 +146,25 @@ export default function CouresForm({ navigation, route }) {
             letterSpacing: 0.15 
           }}
         >
-          Create Course
+          {isEditing ? "Edit Course" : "Create Course"}
         </Text>
         <TouchableOpacity
           accessible={true}
           accessibilityLabel="Close form"
           accessibilityHint="Double tap to discard changes and go back"
           accessibilityRole="button"
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            console.log('CouresForm: Closing form');
+            navigation.goBack();
+          }}
           className="p-2 rounded-full"
           style={{ backgroundColor: 'rgba(0,0,0,0.05)' }}
         >
           <MaterialIcons name="close" size={24} color="#424242" />
         </TouchableOpacity>
       </View>
+
+
 
       <ScrollView className="flex-1 px-4">
         <View className="py-4">

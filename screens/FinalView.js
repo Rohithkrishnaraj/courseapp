@@ -356,30 +356,40 @@ export default function FinalView({ route }) {
         </View>
         <View className="w-full">
           <View className="py-2  ">
-            <View className="pt-4 pb-2 flex justify-between flex-row px-4 ">
-              <HTMLView
-                value={unitname}
-                textComponentProps={{
-                  style: { fontSize: 21 },
-                }}
-              />
-              <TouchableOpacity
-                className="bg-gray-300 w-32 py-2  px-1.5 rounded-md flex-row justify-between items-center"
-                onPress={() => speak(unitDecsription)}
-              >
-                  <MaterialIcons name="play-circle-outline" size={25} color="black" />
-                <Text>Play Description</Text>
-              </TouchableOpacity>
+            <View className="pt-4 pb-2 px-4">
+              <View className="flex flex-col space-y-3">
+                <View className="flex flex-row items-center justify-between">
+                  <View className="flex-1">
+                    <HTMLView
+                      value={unitname}
+                      textComponentProps={{
+                        style: { fontSize: 21 },
+                      }}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    className="bg-gray-300 px-3 py-2 rounded-lg flex-row items-center space-x-2 ml-2"
+                    onPress={() => speak(unitDecsription)}
+                  >
+                    <MaterialIcons name="play-circle-outline" size={20} color="black" />
+                    <Text className="text-sm">Play Description</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-            <View className="flex flex-row  items-center h-32 px-4 py-2 w-full">
-              <HTMLView
-                value={unitDecsription}
-                className="w-full border  border-gray-300 h-32 px-2 py-1"
-                textComponentProps={{
-                  style: { fontSize: 21,textAlign: 'center',textAlign: 'left',textAlign: 'right'
-                },
-                }}
-              />
+            <View className="px-4 py-2">
+              <View className="bg-gray-50 rounded-lg p-4">
+                <HTMLView
+                  value={unitDecsription}
+                  textComponentProps={{
+                    style: { 
+                      fontSize: 16,
+                      lineHeight: 24,
+                      color: '#374151'
+                    },
+                  }}
+                />
+              </View>
             </View>
 
             <View className="w-full  py-6 ">

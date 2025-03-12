@@ -5,21 +5,28 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
-import { getAllLessonsForCourse, getAllUnitsForLesson } from "../DB/DbStorage";
-import { AntDesign } from "@expo/vector-icons";
+import { getAllLessonsForCourse, getAllUnitsForLesson, resetProgress } from "../DB/DbStorage";
+import { AntDesign, MaterialIcons, Ionicons } from "@expo/vector-icons";
 
 export default function CourseDetails({ route, navigation }) {
   const { course } = route.params;
+  console.log("Course data received:", course); // Debug log
   const [lessons, setLessons] = useState([]);
   const [lessonUnits, setLessonUnits] = useState({});
   const [loading, setLoading] = useState(true);
   const [expandedLessons, setExpandedLessons] = useState({});
   const [overallProgress, setOverallProgress] = useState(0);
+  const [lessonStats, setLessonStats] = useState({});
 
   useEffect(() => {
-    fetchLessonsAndUnits();
-  }, [course.id]);
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchLessonsAndUnits();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const fetchLessonsAndUnits = async () => {
     try {
@@ -28,6 +35,7 @@ export default function CourseDetails({ route, navigation }) {
       setLessons(fetchedLessons);
 
       const unitsMap = {};
+      const statsMap = {};
       let completedUnitsTotal = 0;
       let totalUnits = 0;
 
@@ -35,18 +43,25 @@ export default function CourseDetails({ route, navigation }) {
         fetchedLessons.map(async (lesson) => {
           const units = await getAllUnitsForLesson(lesson.id);
           unitsMap[lesson.id] = units;
-          completedUnitsTotal += units.filter(
-            (unit) => unit.state === "completed"
-          ).length;
-          totalUnits += units.length;
+          
+          const completedUnits = units.filter(unit => unit.state === "completed").length;
+          const totalLessonUnits = units.length;
+          
+          statsMap[lesson.id] = {
+            total: totalLessonUnits,
+            completed: completedUnits,
+            progress: totalLessonUnits > 0 ? Math.round((completedUnits / totalLessonUnits) * 100) : 0
+          };
+
+          completedUnitsTotal += completedUnits;
+          totalUnits += totalLessonUnits;
         })
       );
 
       setLessonUnits(unitsMap);
+      setLessonStats(statsMap);
       setOverallProgress(
-        totalUnits > 0
-          ? Math.round((completedUnitsTotal / totalUnits) * 100)
-          : 0
+        totalUnits > 0 ? Math.round((completedUnitsTotal / totalUnits) * 100) : 0
       );
       setLoading(false);
     } catch (error) {
@@ -62,14 +77,40 @@ export default function CourseDetails({ route, navigation }) {
     }));
   };
 
-  const calculateLessonProgress = (lessonId) => {
-    const units = lessonUnits[lessonId] || [];
-    const completedUnits = units.filter(
-      (unit) => unit.state === "completed"
-    ).length;
-    return units.length > 0
-      ? Math.round((completedUnits / units.length) * 100)
-      : 0;
+  const getProgressColor = (progress) => {
+    if (progress >= 100) return "bg-green-500";
+    if (progress >= 50) return "bg-yellow-500";
+    return "bg-blue-500";
+  };
+
+  const handleResetProgress = async () => {
+    Alert.alert(
+      "Reset Progress",
+      "Are you sure you want to reset all progress? This cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await resetProgress();
+              await fetchLessonsAndUnits(); // Refresh the data
+              Alert.alert("Success", "Progress has been reset successfully!");
+            } catch (error) {
+              console.error("Error resetting progress:", error);
+              Alert.alert("Error", "Failed to reset progress");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (loading) {
@@ -83,50 +124,65 @@ export default function CourseDetails({ route, navigation }) {
   return (
     <ScrollView className="flex-1 bg-gray-50">
       {/* Course Header */}
-      <View className="px-4 py-6 bg-white shadow-sm">
-        <Text className="text-2xl font-bold text-gray-800">{course.title}</Text>
-        <Text className="text-base text-gray-600 mt-2">
-          {course.description}
-        </Text>
-        <View className="mt-4">
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-sm text-gray-600">Overall Progress</Text>
-            <Text className="text-sm font-bold text-gray-800">
-              {overallProgress}%
-            </Text>
+      <View className="bg-white shadow-sm">
+        <View className="px-4 pt-6 pb-4">
+          <View className="flex-row items-center justify-between mb-2">
+            <View className="flex-1 mr-4">
+              <Text className="text-2xl font-bold  text-gray-800">
+                {course?.name || course?.title || "Course Details"}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={handleResetProgress}
+              className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center"
+              style={{ elevation: 2 }}
+            >
+              <Ionicons name="refresh" size={22} color="#6B7280" />
+            </TouchableOpacity>
           </View>
-          <View className="h-2 bg-gray-200 rounded-full">
-            <View
-              className="h-2 bg-green-500 rounded-full"
-              style={{ width: `${overallProgress}%` }}
-            />
+          <Text className="text-base text-gray-600">
+            {course?.description || "No description available"}
+          </Text>
+        </View>
+        
+        {/* Overall Progress Card */}
+        <View className="px-4 pb-6">
+          <View className="bg-gray-50 rounded-xl p-4">
+            <View className="flex-row justify-between items-center mb-3">
+              <View className="flex-row items-center">
+                <MaterialIcons name="insights" size={24} color="#4B5563" />
+                <Text className="text-lg font-semibold text-gray-800 ml-2">Overall Progress</Text>
+              </View>
+              <View className="bg-white px-3 py-1 rounded-full shadow-sm">
+                <Text className="text-sm font-bold text-gray-700">{overallProgress}%</Text>
+              </View>
+            </View>
+            <View className="h-3 bg-gray-200 rounded-full overflow-hidden">
+              <View
+                className={`h-3 ${getProgressColor(overallProgress)} rounded-full`}
+                style={{ width: `${overallProgress}%` }}
+              />
+            </View>
           </View>
         </View>
       </View>
 
       {/* Lessons List */}
       <View className="px-4 py-6">
-        <Text className="text-xl font-semibold text-gray-800 mb-4">
-          Course Content
-        </Text>
+        <Text className="text-xl font-semibold text-gray-800 mb-4">Course Content</Text>
 
         {lessons.length === 0 ? (
           <View className="py-8 items-center">
-            <Text className="text-gray-500 text-lg">
-              No lessons available yet
-            </Text>
+            <Text className="text-gray-500 text-lg">No lessons available yet</Text>
           </View>
         ) : (
           lessons.map((lesson, index) => {
-            const lessonProgress = calculateLessonProgress(lesson.id);
+            const stats = lessonStats[lesson.id] || { total: 0, completed: 0, progress: 0 };
             const units = lessonUnits[lesson.id] || [];
             const isExpanded = expandedLessons[lesson.id];
 
             return (
-              <View
-                key={lesson.id}
-                className="mb-4 bg-white rounded-xl shadow-sm"
-              >
+              <View key={lesson.id} className="mb-4 bg-white rounded-xl shadow-sm overflow-hidden">
                 <TouchableOpacity
                   onPress={() => toggleLesson(lesson.id)}
                   className="p-4"
@@ -136,29 +192,37 @@ export default function CourseDetails({ route, navigation }) {
                       <Text className="text-lg font-medium text-gray-800">
                         {index + 1}. {lesson.name}
                       </Text>
-                      <Text className="text-sm text-gray-600 mt-1">
-                        {units.length} units • {lessonProgress}% complete
-                      </Text>
+                      <View className="flex-row items-center mt-1">
+                        <MaterialIcons name="library-books" size={16} color="#6B7280" />
+                        <Text className="text-sm text-gray-600 ml-1">
+                          {stats.completed}/{stats.total} units completed
+                        </Text>
+                      </View>
                     </View>
-                    <AntDesign
-                      name={isExpanded ? "up" : "down"}
-                      size={20}
-                      color="#4B5563"
-                    />
+                    <View className="flex-row items-center">
+                      <Text className="text-sm font-medium text-gray-700 mr-2">
+                        {stats.progress}%
+                      </Text>
+                      <AntDesign
+                        name={isExpanded ? "up" : "down"}
+                        size={20}
+                        color="#4B5563"
+                      />
+                    </View>
                   </View>
 
-                  <View className="mt-2">
-                    <View className="h-1 bg-gray-200 rounded-full">
+                  <View className="mt-3">
+                    <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
                       <View
-                        className="h-1 bg-green-500 rounded-full"
-                        style={{ width: `${lessonProgress}%` }}
+                        className={`h-2 ${getProgressColor(stats.progress)} rounded-full`}
+                        style={{ width: `${stats.progress}%` }}
                       />
                     </View>
                   </View>
                 </TouchableOpacity>
 
                 {isExpanded && (
-                  <View className="px-4 pb-4">
+                  <View className="px-4 pb-4 border-t border-gray-100">
                     {units.map((unit, unitIndex) => (
                       <TouchableOpacity
                         key={unit.id}
@@ -170,28 +234,36 @@ export default function CourseDetails({ route, navigation }) {
                             unitDescription: unit.description,
                           })
                         }
-                        className="flex-row items-center py-2"
+                        className="flex-row items-center py-3 border-b border-gray-100 last:border-b-0"
                       >
                         <View
-                          className={`w-6 h-6 rounded-full ${
+                          className={`w-8 h-8 rounded-full ${
                             unit.state === "completed"
                               ? "bg-green-500"
                               : "bg-gray-200"
                           } mr-3 items-center justify-center`}
                         >
-                          {unit.state === "completed" && (
-                            <AntDesign name="check" size={14} color="white" />
+                          {unit.state === "completed" ? (
+                            <MaterialIcons name="check" size={16} color="white" />
+                          ) : (
+                            <Text className="text-xs text-gray-600">{unitIndex + 1}</Text>
                           )}
                         </View>
-                        <Text
-                          className={`flex-1 ${
-                            unit.state === "completed"
-                              ? "text-gray-600"
-                              : "text-gray-800"
-                          }`}
-                        >
-                          {unitIndex + 1}. {unit.name}
-                        </Text>
+                        <View className="flex-1">
+                          <Text
+                            className={`${
+                              unit.state === "completed"
+                                ? "text-gray-600"
+                                : "text-gray-800"
+                            } font-medium`}
+                          >
+                            {unit.name}
+                          </Text>
+                          {unit.state === "completed" && (
+                            <Text className="text-xs text-green-600 mt-1">Completed</Text>
+                          )}
+                        </View>
+                        <MaterialIcons name="chevron-right" size={20} color="#9CA3AF" />
                       </TouchableOpacity>
                     ))}
                   </View>

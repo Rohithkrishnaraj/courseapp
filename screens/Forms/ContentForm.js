@@ -599,12 +599,12 @@ export default function ContentForm({ navigation, route }) {
         </View>
       </View>
 
-      <ConfirmDialog
+      {/* <ConfirmDialog
         visible={visible}
         onDismiss={() => setVisible(false)}
         onConfirm={handleSave}
         isEditing={isEditing}
-      />
+      /> */}
     </View>
   );
 }

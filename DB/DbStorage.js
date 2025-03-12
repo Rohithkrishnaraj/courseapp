@@ -13,39 +13,12 @@ const createCoursesTable = async () => {
           name TEXT,
           description TEXT,
           colour TEXT,
-          state TEXT
+          state TEXT,
+          category TEXT DEFAULT 'Development'
         )`,
         [],
         () => {
-          // Check if category column exists
-          tx.executeSql(
-            "PRAGMA table_info(courses)",
-            [],
-            (_, { rows }) => {
-              const hasCategory = Array.from(rows._array).some(
-                (column) => column.name === 'category'
-              );
-              
-              if (!hasCategory) {
-                // Add category column if it doesn't exist
-                tx.executeSql(
-                  `ALTER TABLE courses ADD COLUMN category TEXT DEFAULT 'Development'`,
-                  [],
-                  () => {
-                    resolve();
-                  },
-                  (_, error) => {
-                    reject(error);
-                  }
-                );
-              } else {
-                resolve();
-              }
-            },
-            (_, error) => {
-              reject(error);
-            }
-          );
+          resolve();
         },
         (_, error) => {
           reject(error);
@@ -96,17 +69,72 @@ const getAllCourses = async () => {
 };
 
 // Function to update a course
-const updateCourse = async (id, name, description, colour, state) => {
+const updateCourse = (id, name, description, colour, state) => {
+  console.log('DbStorage: Starting course update with data:', {
+    id,
+    name,
+    description,
+    colour,
+    state
+  });
+
   return new Promise((resolve, reject) => {
+    if (!id) {
+      console.error('DbStorage: Update failed - No course ID provided');
+      reject(new Error('Course ID is required for update'));
+      return;
+    }
+
     db.transaction((tx) => {
+      // First verify the course exists
+      const selectQuery = 'SELECT * FROM courses WHERE id = ?';
+      console.log('DbStorage: Verifying course exists with query:', selectQuery, 'params:', [id]);
+      
       tx.executeSql(
-        `UPDATE courses SET name=?, description=?, colour=?, state=? WHERE id=?`,
-        [name, description, colour, state, id],
-        () => {
-          resolve();
+        selectQuery,
+        [id],
+        (_, result) => {
+          if (result.rows.length === 0) {
+            console.error('DbStorage: No course found with ID:', id);
+            reject(new Error(`No course found with ID ${id}`));
+            return;
+          }
+
+          const existingCourse = result.rows.item(0);
+          console.log('DbStorage: Found existing course:', existingCourse);
+
+          // Course exists, proceed with update
+          const updateQuery = 'UPDATE courses SET name = ?, description = ?, colour = ?, state = ? WHERE id = ?';
+          const params = [name, description, colour, state, id];
+          console.log('DbStorage: Executing update query:', updateQuery, 'params:', params);
+
+          tx.executeSql(
+            updateQuery,
+            params,
+            (_, updateResult) => {
+              console.log('DbStorage: Update result:', updateResult);
+              if (updateResult.rowsAffected > 0) {
+                console.log('DbStorage: Course updated successfully');
+                resolve({
+                  success: true,
+                  message: 'Course updated successfully',
+                  rowsAffected: updateResult.rowsAffected,
+                  courseId: id
+                });
+              } else {
+                console.error('DbStorage: Update failed - No rows affected');
+                reject(new Error('Failed to update course - No rows affected'));
+              }
+            },
+            (_, error) => {
+              console.error('DbStorage: SQL Update error:', error);
+              reject(new Error(`Failed to update course: ${error.message}`));
+            }
+          );
         },
         (_, error) => {
-          reject(error);
+          console.error('DbStorage: SQL Select error:', error);
+          reject(new Error(`Failed to verify course: ${error.message}`));
         }
       );
     });
@@ -114,18 +142,45 @@ const updateCourse = async (id, name, description, colour, state) => {
 };
 
 // Function to delete a course
-const deleteCourse = async (id) => {
+const deleteCourse = (courseId) => {
   return new Promise((resolve, reject) => {
     db.transaction((tx) => {
+      // First delete related records from UnitAttachments table
       tx.executeSql(
-        `DELETE FROM courses WHERE id=?`,
-        [id],
+        'DELETE FROM UnitAttachments WHERE unit IN (SELECT id FROM units WHERE lesson IN (SELECT id FROM lessons WHERE course = ?))',
+        [courseId],
         () => {
-          resolve();
+          // Delete units
+          tx.executeSql(
+            'DELETE FROM units WHERE lesson IN (SELECT id FROM lessons WHERE course = ?)',
+            [courseId],
+            () => {
+              // Delete lessons
+              tx.executeSql(
+                'DELETE FROM lessons WHERE course = ?',
+                [courseId],
+                () => {
+                  // Finally delete the course
+                  tx.executeSql(
+                    'DELETE FROM courses WHERE id = ?',
+                    [courseId],
+                    (_, result) => {
+                      if (result.rowsAffected > 0) {
+                        resolve(true);
+                      } else {
+                        reject(new Error('Course not found'));
+                      }
+                    },
+                    (_, error) => reject(error)
+                  );
+                },
+                (_, error) => reject(error)
+              );
+            },
+            (_, error) => reject(error)
+          );
         },
-        (_, error) => {
-          reject(error);
-        }
+        (_, error) => reject(error)
       );
     });
   });
@@ -517,6 +572,25 @@ const migrateExistingCourses = async () => {
           resolve();
         },
         (_, error) => {
+          reject(error);
+        }
+      );
+    });
+  });
+};
+
+export const resetProgress = () => {
+  return new Promise((resolve, reject) => {
+    db.transaction(tx => {
+      tx.executeSql(
+        'UPDATE units SET state = NULL WHERE state = "completed"',
+        [],
+        (_, result) => {
+          console.log('Progress reset successful:', result.rowsAffected, 'units reset');
+          resolve(result);
+        },
+        (_, error) => {
+          console.error('Error resetting progress:', error);
           reject(error);
         }
       );

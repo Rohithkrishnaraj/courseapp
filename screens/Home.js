@@ -8,15 +8,25 @@ import {
   Dimensions,
   StatusBar,
   RefreshControl,
+  Alert,
+  Pressable,
+  Platform,
+  UIManager,
+  LayoutAnimation,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { AntDesign } from "@expo/vector-icons";
 import { Feather } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { getAllCourses, getAllLessonsForCourse } from "../DB/DbStorage";
+import { getAllCourses, getAllLessonsForCourse, deleteCourse as deleteCourseFromDB } from "../DB/DbStorage";
 
 const { width } = Dimensions.get("window");
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // Helper function to convert Tailwind classes to color codes
 const getGradientColors = (colour) => {
@@ -97,9 +107,11 @@ export default function Home({ navigation, route }) {
       <TouchableOpacity
         accessible={true}
         accessibilityLabel={`${item.name} course with ${lessonCount} lessons`}
-        accessibilityHint="Double tap to view course details"
+        accessibilityHint="Double tap to view course details, long press for more options"
         className="w-full mb-4 overflow-hidden px-4"
         onPress={() => navigation.navigate("Lesson", { itemid: item.id })}
+        onLongPress={() => handleLongPress(item)}
+        delayLongPress={300}
       >
         <LinearGradient
           colors={getGradientColors(item.colour)}
@@ -126,6 +138,91 @@ export default function Home({ navigation, route }) {
         </LinearGradient>
       </TouchableOpacity>
     );
+  };
+
+  const handleLongPress = (item) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    Alert.alert(
+      "Course Options",
+      "What would you like to do with this course?",
+      [
+        {
+          text: "Edit",
+          onPress: () => handleEditCourse(item),
+          style: "default",
+        },
+        {
+          text: "Delete",
+          onPress: () => confirmDelete(item),
+          style: "destructive",
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const confirmDelete = (item) => {
+    Alert.alert(
+      "Delete Course",
+      "Are you sure you want to delete this course? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          onPress: () => deleteCourse(item.id),
+          style: "destructive",
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const deleteCourse = async (courseId) => {
+    try {
+      await deleteCourseFromDB(courseId);
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setcoursedata(prevData => prevData.filter(course => course.id !== courseId));
+      // Refresh lesson counts after deletion
+      fetchLessonCounts();
+      Alert.alert(
+        "Success",
+        "Course deleted successfully",
+        [{ text: "OK" }],
+        { cancelable: false }
+      );
+    } catch (error) {
+      console.error("Delete course error:", error);
+      Alert.alert(
+        "Error",
+        "Failed to delete course. Please try again.",
+        [{ text: "OK" }],
+        { cancelable: false }
+      );
+    }
+  };
+
+  const handleEditCourse = (item) => {
+    console.log('Home: Editing course item:', item);
+    const courseData = {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      colour: item.colour,
+      state: item.state,
+      category: item.category
+    };
+    console.log('Home: Passing course data to form:', courseData);
+    navigation.navigate("CouresForm", {  // Fixed component name
+      courseData,
+      isEditing: true 
+    });
   };
 
   return (
@@ -163,7 +260,7 @@ export default function Home({ navigation, route }) {
 
       {/* Main Content */}
       <FlatList
-        className="flex-1"
+        className="flex-1 mt-2"
         data={coursedata}
         renderItem={renderitems}
         keyExtractor={(item) => item.id.toString()}
@@ -194,7 +291,7 @@ export default function Home({ navigation, route }) {
         accessibilityLabel="Add new course"
         accessibilityHint="Double tap to create a new course"
         className="absolute bottom-6 right-6"
-        onPress={() => navigation.navigate("CouresForm")}
+        onPress={() => navigation.navigate("CouresForm")}  // Fixed component name
       >
         <View className="w-14 h-14 rounded-full bg-blue-500 shadow-lg justify-center items-center">
           <Feather name="plus" size={24} color="white" />

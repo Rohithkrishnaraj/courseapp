@@ -9,11 +9,12 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
+  Alert,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import RenderHtml from 'react-native-render-html';
-import { getAllExtras, getAllUnitsForLesson } from "../DB/DbStorage";
+import { getAllExtras, getAllUnitsForLesson, updateUnit } from "../DB/DbStorage";
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import * as IntentLauncher from "expo-intent-launcher";
@@ -27,6 +28,7 @@ export default function UnitPreview({ route, navigation }) {
   const [soundAnimation, setSoundAnimation] = useState(false);
   const [selectedSongIndex, setSelectedSongIndex] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   // Define documentTypes at component level
   const documentTypes = ['pdf', 'doc', 'docx', 'txt', 'application'];
@@ -130,6 +132,21 @@ export default function UnitPreview({ route, navigation }) {
       });
     } catch (error) {
       console.error("Error opening document:", error);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    try {
+      await updateUnit(unitId, unitName, unitDescription, "bg-blue-200", "completed");
+      setIsCompleted(true);
+      Alert.alert(
+        "Success",
+        "Unit marked as completed!",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
+    } catch (error) {
+      console.error("Error marking unit as complete:", error);
+      Alert.alert("Error", "Failed to mark unit as complete");
     }
   };
 
@@ -347,6 +364,23 @@ export default function UnitPreview({ route, navigation }) {
         )}
         keyExtractor={item => item.id.toString()}
         contentContainerStyle={{ paddingVertical: 16 }}
+        ListFooterComponent={() => (
+          <View className="px-4 py-6 bg-white">
+            <TouchableOpacity
+              onPress={handleMarkComplete}
+              className={`w-full py-4 rounded-xl ${isCompleted ? 'bg-green-500' : 'bg-blue-500'} flex-row justify-center items-center`}
+            >
+              <MaterialIcons 
+                name={isCompleted ? "check-circle" : "check-circle-outline"} 
+                size={24} 
+                color="white" 
+              />
+              <Text className="text-white font-semibold text-lg ml-2">
+                {isCompleted ? "Completed!" : "Mark as Complete"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       />
     </View>
   );
