@@ -1,77 +1,31 @@
-import { View, Text, Alert } from "react-native";
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  ScrollView, 
+  TouchableOpacity, 
+  Alert,
+  StatusBar 
+} from "react-native";
 import React, { useState, useEffect } from "react";
-import AddFolder from "../Utils/Form";
 import { createLessonsTable, insertLesson, updateLesson } from "../../DB/DbStorage";
+import PickColor from "../Utils/PickColor";
+import Dialog from "../Utils/Dialog";
+import { MaterialIcons } from "@expo/vector-icons";
 
 export default function LessonForm({ navigation, route }) {
-  console.log("=== LessonForm Mounted ===");
-  console.log("Navigation props:", navigation);
-  console.log("Route props:", route);
-  
   const [visible, setVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedColor, setSelectedColor] = useState("bg-indigo-500");
   
-  // Get courseId directly from route.params
   const courseId = route.params?.CourseId;
   const isEditing = route.params?.isEditing;
   const lessonData = route.params?.lessonData;
 
-  // Debug log
-  useEffect(() => {
-    console.log("=== LessonForm Effect ===");
-    console.log("Component fully mounted");
-    console.log("Route Params:", {
-      courseId,
-      isEditing,
-      lessonData,
-      fullParams: route.params
-    });
-  }, []);
-
-  const handleSave = async () => {
-    console.log("handleSave called with:", {
-      courseId,
-      isEditing,
-      formData: Formdata,
-      selectedcolor
-    });
-
-    if (!Formdata.LessonName.trim()) {
-      Alert.alert("Error", "Lesson name is required");
-      return;
-    }
-
-    if (!courseId && !isEditing) {
-      console.error("CourseId missing:", route.params);
-      Alert.alert("Error", "Course ID is missing. Please try again.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      if (isEditing) {
-        await handleEditItem();
-      } else {
-        const result = await handleAddItem();
-        console.log("Add lesson result:", result);
-      }
-      setVisible(false);
-      navigation.goBack();
-    } catch (error) {
-      console.error("Error saving lesson:", error);
-      Alert.alert(
-        "Error",
-        isEditing ? "Failed to update lesson" : "Failed to create lesson. Please check the console for details."
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setVisible(false);
-    navigation.goBack();
-  };
+  const [Formdata, setFormdata] = useState({
+    LessonName: "",
+    LessonDescription: "",
+  });
 
   useEffect(() => {
     const setupTable = async () => {
@@ -90,96 +44,211 @@ export default function LessonForm({ navigation, route }) {
         LessonName: lessonData.name || "",
         LessonDescription: lessonData.description || "",
       });
-      setselectedcolor(lessonData.colour);
+      setSelectedColor(lessonData.colour || "bg-indigo-500");
     }
   }, [isEditing, lessonData]);
 
-  const [selectedcolor, setselectedcolor] = useState(null);
-  const [Formdata, setFormdata] = useState({
-    LessonName: "",
-    LessonDescription: "",
-  });
-
-  const [FormdataArray, SetFormdataArray] = useState([]);
-
-  const handleAddItem = async () => {
-    console.log("handleAddItem called with:", {
-      courseId,
-      formData: Formdata,
-      selectedcolor
-    });
-
-    if (!courseId || !Formdata.LessonName.trim()) {
-      const error = new Error("Missing required fields");
-      console.error(error, { courseId, lessonName: Formdata.LessonName });
-      throw error;
+  const handleSave = async () => {
+    if (!Formdata.LessonName.trim()) {
+      Alert.alert("Error", "Lesson name is required");
+      return;
     }
 
+    if (!courseId && !isEditing) {
+      Alert.alert("Error", "Course ID is missing. Please try again.");
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      const result = await insertLesson(
-        courseId,
-        Formdata.LessonName.trim(),
-        Formdata.LessonDescription.trim() || "",
-        selectedcolor,
-        "draft"
-      );
-
-      if (!result) {
-        throw new Error("Failed to insert lesson - no result returned");
+      if (isEditing) {
+        await updateLesson(
+          lessonData.id,
+          Formdata.LessonName.trim(),
+          Formdata.LessonDescription.trim(),
+          selectedColor,
+          lessonData.state || "draft"
+        );
+      } else {
+        await insertLesson(
+          courseId,
+          Formdata.LessonName.trim(),
+          Formdata.LessonDescription.trim(),
+          selectedColor,
+          "draft"
+        );
       }
-
-      console.log("Lesson inserted successfully:", result);
-
-      setFormdata({
-        LessonName: "",
-        LessonDescription: "",
-      });
-      return result;
+      setVisible(true);
     } catch (error) {
-      console.error("Error in handleAddItem:", error);
-      throw error;
+      console.error("Error saving lesson:", error);
+      Alert.alert(
+        "Error",
+        isEditing ? "Failed to update lesson" : "Failed to create lesson"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleEditItem = async () => {
-    if (!lessonData?.id || !Formdata.LessonName.trim()) {
-      throw new Error("Missing required fields");
-    }
-
-    try {
-      await updateLesson(
-        lessonData.id,
-        Formdata.LessonName.trim(),
-        Formdata.LessonDescription.trim() || "",
-        selectedcolor,
-        lessonData.state || "draft"
-      );
-    } catch (error) {
-      console.error("Error in handleEditItem:", error);
-      throw error;
-    }
+  const handleInputChange = (key, value) => {
+    setFormdata({
+      ...Formdata,
+      [key]: value,
+    });
   };
 
   return (
     <View className="flex-1 bg-gray-50">
-      <AddFolder
-        Tittle={isEditing ? "Edit Lesson" : "Add Lesson"}
-        Name="Lesson Name"
-        Description="Lesson Description"
-        NameProps="LessonName"
-        DescriptionProps="LessonDescription"
-        Formdata={Formdata}
-        setFormdata={setFormdata}
-        FormdataArray={FormdataArray}
-        SetFormdataArray={SetFormdataArray}
-        handleAddItem={handleAddItem}
-        setselectedcolor={setselectedcolor}
-        handleCancel={handleCancel}
-        setVisible={setVisible}
+      <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
+      
+      {/* Header */}
+      <View 
+        className="px-6 pt-4 pb-2 bg-white flex-row justify-between items-center border-b border-gray-100"
+        style={{
+          elevation: 2,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.22,
+          shadowRadius: 2.22,
+        }}
+      >
+        <View>
+          <Text 
+            className="text-2xl font-bold text-gray-800"
+            style={{ letterSpacing: 0.15 }}
+          >
+            {isEditing ? 'Edit Lesson' : 'Create Lesson'}
+          </Text>
+          <Text className="text-base text-gray-600">
+            {isEditing ? 'Update lesson details' : 'Add a new lesson'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          accessible={true}
+          accessibilityLabel="Close form"
+          accessibilityHint="Double tap to discard changes and go back"
+          accessibilityRole="button"
+          onPress={() => navigation.goBack()}
+          className="p-2 rounded-full"
+          style={{ backgroundColor: 'rgba(0,0,0,0.05)' }}
+        >
+          <MaterialIcons name="close" size={24} color="#424242" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView className="flex-1 px-6">
+        <View className="py-6">
+          <Text 
+            className="text-base font-medium mb-2 text-gray-900"
+            style={{ letterSpacing: 0.15 }}
+          >
+            Lesson Name
+          </Text>
+          <TextInput
+            value={Formdata.LessonName}
+            placeholder="Enter the lesson name"
+            onChangeText={(value) => handleInputChange("LessonName", value)}
+            className="w-full bg-white rounded-lg py-3 px-4 text-gray-900 mb-1"
+            style={{
+              elevation: 1,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.18,
+              shadowRadius: 1.0,
+            }}
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
+
+        <View className="py-4">
+          <Text 
+            className="text-base font-medium mb-2 text-gray-900"
+            style={{ letterSpacing: 0.15 }}
+          >
+            Lesson Description
+          </Text>
+          <TextInput
+            value={Formdata.LessonDescription}
+            placeholder="Enter the lesson description"
+            onChangeText={(value) => handleInputChange("LessonDescription", value)}
+            multiline
+            numberOfLines={4}
+            className="w-full bg-white rounded-lg py-3 px-4 text-gray-900"
+            style={{
+              elevation: 1,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.18,
+              shadowRadius: 1.0,
+              textAlignVertical: 'top',
+              minHeight: 120,
+            }}
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
+
+        <View className="py-4">
+          <Text 
+            className="text-base font-medium mb-4 text-gray-900"
+            style={{ letterSpacing: 0.15 }}
+          >
+            Theme Color
+          </Text>
+          <PickColor 
+            selectedColor={selectedColor} 
+            onColorSelect={setSelectedColor} 
+          />
+        </View>
+
+        <View className="flex-row justify-end py-6">
+          <TouchableOpacity
+            accessible={true}
+            accessibilityLabel="Cancel"
+            accessibilityHint="Discard changes and go back"
+            accessibilityRole="button"
+            onPress={() => navigation.goBack()}
+            className="px-6 py-3 rounded-lg bg-gray-100 mr-3"
+          >
+            <Text 
+              className="text-gray-700 font-medium"
+              style={{ letterSpacing: 0.25 }}
+            >
+              Cancel
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessible={true}
+            accessibilityLabel={isSubmitting ? "Saving lesson" : "Save lesson"}
+            accessibilityHint="Save the lesson and return"
+            accessibilityRole="button"
+            onPress={handleSave}
+            disabled={isSubmitting}
+            className={`px-6 py-3 rounded-lg ${isSubmitting ? 'bg-blue-400' : 'bg-blue-600'}`}
+            style={{
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.2,
+              shadowRadius: 1.41,
+            }}
+          >
+            <Text 
+              className="text-white font-medium"
+              style={{ letterSpacing: 0.25 }}
+            >
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+      
+      <Dialog
         visible={visible}
-        handleSave={handleSave}
-        selectedcolor={selectedcolor}
-        isSubmitting={isSubmitting}
+        setVisible={setVisible}
+        handleSave={() => {
+          setVisible(false);
+          navigation.goBack();
+        }}
       />
     </View>
   );

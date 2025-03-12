@@ -204,30 +204,34 @@ export default function UnitPreview({ route, navigation }) {
                     </View>
                     <Text className="text-gray-500 text-sm">{imageContent.length} items</Text>
                   </View>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    className="pb-2"
-                  >
-                    {imageContent.map((item, index) => (
-                      <TouchableOpacity
-                        key={item.id}
-                        onPress={() => openDocumentWithURL(item.blob)}
-                        className="mr-4 bg-gray-50 rounded-xl overflow-hidden shadow-sm"
-                        style={{ width: width * 0.65 }}
-                      >
-                        <Image
-                          source={{ uri: item.blob }}
-                          style={{ height: 200 }}
-                          className="w-full"
-                          resizeMode="cover"
-                        />
-                        <View className="p-3">
-                          <Text className="text-gray-800 font-medium text-base">{item.name}</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                  <View style={{ height: 280 }}>
+                    <FlatList
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      decelerationRate="fast"
+                      snapToInterval={width * 0.65 + 16}
+                      snapToAlignment="center"
+                      data={imageContent}
+                      keyExtractor={(item) => item.id.toString()}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          onPress={() => openDocumentWithURL(item.blob)}
+                          className="mr-4 bg-gray-50 rounded-xl overflow-hidden shadow-sm"
+                          style={{ width: width * 0.65 }}
+                        >
+                          <Image
+                            source={{ uri: item.blob }}
+                            style={{ height: 200 }}
+                            className="w-full"
+                            resizeMode="cover"
+                          />
+                          <View className="p-3">
+                            <Text className="text-gray-800 font-medium text-base">{item.name}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                    />
+                  </View>
                 </View>
               )}
 

@@ -42,34 +42,34 @@ export default function App({
   showDialog,
   isSaveEnabled,
   initialContent,
+  hideButtons
 }) {
   const richText = useRef();
-  const inputref = useRef(null);
-
-  useEffect(() => {
-    inputref.current?.focus();
-  }, []);
+  const [content, setContent] = useState(initialContent || '');
+  const [showDescError, setShowDescError] = useState(false);
 
   useEffect(() => {
     if (initialContent && richText.current) {
       richText.current.setContentHTML(initialContent);
+      setContent(initialContent);
     }
   }, [initialContent]);
-
-  const [showDescError, setShowDescError] = useState(false);
 
   const imageActionIcon = () => (
     <Feather name="image" size={16} color="black" />
   );
+
   const FileActionIcon = () => (
     <AntDesign name="addfile" size={16} color="black" />
   );
+
   const Audioaction = () => (
     <MaterialIcons name="audio-file" size={16} color="black" />
   );
 
   const richTextHandle = (descriptionText) => {
-    if (descriptionText) {
+    setContent(descriptionText);
+    if (descriptionText && descriptionText.trim() !== '') {
       handlericheditortext(descriptionText);
       setShowDescError(false);
     } else {
@@ -78,71 +78,79 @@ export default function App({
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.richTextContainer}>
-        <RichToolbar
-          editor={richText}
-          selectedIconTint="#873c1e"
-          iconTint="#312921"
-          actions={[
-            actions.setBold,
-            actions.setItalic,
-            actions.setUnderline,
-            actions.alignLeft,
-            actions.alignCenter,
-            actions.alignRight,
-            actions.alignFull,
-            actions.insertBulletsList,
-            actions.insertOrderedList,
-            "imageAction",
-            "FileAction",
-            "Audioaction",
-            actions.undo,
-            actions.redo,
-          ]}
-          iconSize={13}
-          iconMap={{
-            imageAction: imageActionIcon,
-            FileAction: FileActionIcon,
-            Audioaction: Audioaction,
-          }}
-          imageAction={chooseImage}
-          FileAction={PDFFileUpload}
-          Audioaction={AudioFileUpload}
-          style={styles.richTextToolbarStyle}
-          iconStyle={styles.toolbarIcon}
-        />
-        <RichEditor
-          ref={richText}
-          onChange={richTextHandle}
-          placeholder="Write your content here..."
-          androidHardwareAccelerationDisabled={true}
-          style={styles.richTextEditorStyle}
-          initialHeight={250}
-        />
+    <View className="flex-1 bg-gray-50 rounded-lg overflow-hidden">
+      <View className="flex-1 bg-white p-4">
+        <View style={styles.richTextContainer}>
+          <RichToolbar
+            editor={richText}
+            selectedIconTint="#2563EB"
+            iconTint="#6B7280"
+            actions={[
+              actions.setBold,
+              actions.setItalic,
+              actions.setUnderline,
+              actions.alignLeft,
+              actions.alignCenter,
+              actions.alignRight,
+              actions.insertBulletsList,
+              actions.insertOrderedList,
+              "imageAction",
+              "FileAction",
+              "Audioaction",
+            ]}
+            iconSize={20}
+            iconMap={{
+              imageAction: imageActionIcon,
+              FileAction: FileActionIcon,
+              Audioaction: Audioaction,
+            }}
+            imageAction={chooseImage}
+            FileAction={PDFFileUpload}
+            Audioaction={AudioFileUpload}
+            style={styles.richTextToolbarStyle}
+          />
+          <RichEditor
+            ref={richText}
+            onChange={richTextHandle}
+            placeholder="Write your content here..."
+            androidHardwareAccelerationDisabled={true}
+            style={styles.richTextEditorStyle}
+            initialHeight={200}
+            editorStyle={{
+              backgroundColor: '#ffffff',
+              contentCSSText: 'font-size: 16px; min-height: 200px; padding: 8px;'
+            }}
+            useContainer={true}
+            initialContentHTML={content}
+            onFocus={() => setShowDescError(false)}
+            pasteAsPlainText={true}
+          />
+        </View>
+
+        {showDescError && (
+          <Text style={styles.errorTextStyle}>
+            Please enter some content for your unit
+          </Text>
+        )}
       </View>
 
-      {showDescError && (
-        <Text style={styles.errorTextStyle}>
-          Your content shouldn't be empty 🤔
-        </Text>
+      {!hideButtons && (
+        <View className="flex-row justify-end space-x-3 p-4 bg-gray-50 border-t border-gray-200">
+          <TouchableOpacity
+            onPress={() => setVisible(false)}
+            className="px-4 py-2"
+          >
+            <Text className="text-gray-600">Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={showDialog}
+            disabled={!content.trim()}
+            className={`px-4 py-2 ${!content.trim() && "opacity-40"}`}
+          >
+            <Text className="text-blue-500">Save</Text>
+          </TouchableOpacity>
+        </View>
       )}
-
-      <View className="flex flex-row items-center justify-around my-4">
-        <TouchableOpacity
-          className="bg-gray-100 hover:bg-blue-600 text-white font-bold w-2/5 h-10 rounded-md flex items-center justify-center mt-6"
-          onPress={() => setVisible(false)}
-        >
-          <Text className="text-gray-800 tracking-wider">Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={showDialog}
-          disabled={!isSaveEnabled()}
-          className={`bg-blue-400 hover:bg-blue-600 text-white font-bold w-2/5 h-10 rounded-md flex items-center justify-center mt-6 ${!isSaveEnabled() && "opacity-40"}`}
-        >
-          <Text className="text-gray-50 tracking-wider">Save</Text>
-        </TouchableOpacity>
-      </View>
 
       <DoneDialog
         handleSave={handleSave}
@@ -155,64 +163,34 @@ export default function App({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    height: "90%",
-    backgroundColor: "#e4eef5",
-    padding: 20,
-    alignItems: "center",
-    borderTopRightRadius: 5,
-    borderBottomEndRadius: 5,
-    borderBottomLeftRadius: 5,
-  },
-
-  headerStyle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#312921",
-    marginBottom: 10,
-  },
-
-  htmlBoxStyle: {
-    height: 200,
-    width: 330,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 10,
-  },
-
   richTextContainer: {
-    display: "flex",
-    flexDirection: "column-reverse",
-    width: "100%",
+    flex: 1,
+    minHeight: 200,
+    width: '100%',
   },
 
   richTextEditorStyle: {
-    fontSize: 20,
-    marginBottom: 1.5,
+    flex: 1,
+    backgroundColor: '#ffffff',
     borderRadius: 8,
-    backgroundColor: "#ffffff",
-  },
-
-  toolbarIcon: {
     borderWidth: 1,
-    borderColor: "#b8c6d3",
-    borderRadius: 5,
-    padding: 5,
-    marginRight: 5,
+    borderColor: '#E5E7EB',
+    padding: 16,
+    marginTop: 8,
   },
 
   richTextToolbarStyle: {
-    backgroundColor: "#8ad2fd",
-    borderColor: "#b8c6d3",
-    height: 30,
-    borderRadius: 5,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 8,
     borderWidth: 1,
-    marginBottom: 15,
+    borderColor: '#E5E7EB',
+    marginBottom: 8,
   },
 
   errorTextStyle: {
-    color: "#FF0000",
-    marginBottom: 10,
+    color: '#EF4444',
+    fontSize: 14,
+    marginTop: 8,
   },
 });

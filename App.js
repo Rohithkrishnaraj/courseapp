@@ -35,6 +35,10 @@ import {
   LearningDashboard,
   CourseDetails,
   UnitPreview,
+  Login,
+  Signup,
+  UserDashboard,
+  Course,
 } from "./screens";
 
 const Stack = createNativeStackNavigator();
@@ -63,7 +67,57 @@ export default function App({}) {
   return (
     <SafeAreaView className="w-full h-full">
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Home">
+        <Stack.Navigator initialRouteName="Login">
+        <Stack.Screen
+            name="Login"
+            component={Login}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Course"
+            component={Course}
+            options={({ navigation }) => ({
+              headerLeft: null,
+              headerTitle: (props) => (
+                <View className="flex flex-row justify-between items-center w-full pr-20  h-20">
+                  <View className="flex flex-row">
+                    <Image
+                      source={require("./assets/AppIcon/AppIcon.png")}
+                      className="w-9 h-9"
+                    />
+                    <View className="flex flex-col" />
+                    <Text
+                      {...props}
+                      style={{
+                        fontSize: 25,
+                        fontWeight: "bold",
+                        padding: 5,
+                        borderRadius: 10,
+                        letterSpacing: 3,
+                      }}
+                    >
+                      {props.children}
+                    </Text>
+                  </View>
+                  <View>
+                    <TouchableOpacity
+                      className="rounded-md bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                      onPress={() => navigation.navigate("CouresForm")}
+                    >
+                      <Text className="text-lg text-white font-medium tracking-wider">
+                        Add Course
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="Signup"
+            component={Signup}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen
             name="Home"
             component={Home}
@@ -84,7 +138,7 @@ export default function App({}) {
             name="CourseDetails"
             component={CourseDetails}
             options={{
-              headerTitle: "",
+              headerTitle: "Course Details",
               headerShadowVisible: false,
               headerStyle: {
                 backgroundColor: '#F9FAFB',
@@ -92,7 +146,7 @@ export default function App({}) {
             }}
           />
           <Stack.Screen
-            name="OneClick"
+            name="CourseList"
             component={CourseList}
             options={({ navigation }) => ({
               headerLeft: null,
@@ -146,22 +200,27 @@ export default function App({}) {
           <Stack.Screen
             name="CouresForm"
             component={CouresForm}
-            options={{ headerTitle: "Add Course" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="LessonForm"
             component={LessonForm}
-            options={{ headerTitle: " Add Lesson" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="ContentForm"
             component={ContentForm}
-            options={{ headerTitle: "Create New Content" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="FinalView"
             component={FinalView}
             options={{ headerTitle: "Content" }}
+          />
+          <Stack.Screen
+            name="UserDashboard"
+            component={UserDashboard}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="UnitPreview"

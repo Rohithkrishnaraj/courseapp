@@ -18,7 +18,10 @@ import Datepicker from "./RichEditor"
 import LearningDashboard from "./LearningDashboard"
 import CourseDetails from "./CourseDetails"
 import UnitPreview from "./UnitPreview"
-
+import Login from "./Login"
+import Signup from "./Signup"
+import UserDashboard from "./UserDashboard"
+import Course from "./Course"
 export {
   Home,
   Register,
@@ -40,4 +43,8 @@ export {
   LearningDashboard,
   CourseDetails,
   UnitPreview,
+  Login,
+  Signup,
+  UserDashboard, 
+  Course,
 };

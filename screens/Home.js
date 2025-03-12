@@ -1,180 +1,205 @@
 import {
   View,
   Text,
-  Button,
   TouchableOpacity,
   Image,
   SafeAreaView,
   FlatList,
   Dimensions,
-  StyleSheet,
+  StatusBar,
+  RefreshControl,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { AntDesign } from "@expo/vector-icons";
 import { Feather } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { getAllCourses, getAllLessonsForCourse } from "../DB/DbStorage";
 
-
-
 const { width } = Dimensions.get("window");
-const itemWidth = width/2
-console.log("itemWidth", itemWidth);
-export default function Home({ navigation ,route}) {
+
+// Helper function to convert Tailwind classes to color codes
+const getGradientColors = (colour) => {
+  if (!colour) return ["#f3f4f6", "#ffffff"];
+
+  // Map of Tailwind color classes to actual color codes
+  const colorMap = {
+    "bg-blue-200": ["#bfdbfe", "#dbeafe"],
+    "bg-red-200": ["#fecaca", "#fee2e2"],
+    "bg-green-200": ["#bbf7d0", "#dcfce7"],
+    "bg-yellow-200": ["#fef08a", "#fef9c3"],
+    "bg-purple-200": ["#e9d5ff", "#f3e8ff"],
+    "bg-pink-200": ["#fbcfe8", "#fce7f3"],
+    "bg-indigo-200": ["#c7d2fe", "#e0e7ff"],
+    "bg-gray-200": ["#e5e7eb", "#f3f4f6"],
+  };
+
+  return colorMap[colour] || ["#f3f4f6", "#ffffff"];
+};
+
+export default function Home({ navigation, route }) {
   const [coursedata, setcoursedata] = useState([]);
   const [lessonCounts, setLessonCounts] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  const handleLogout = () => {
+    navigation.replace("Login");
+  };
 
-
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([Fetchcoursedata(), fetchLessonCounts()]);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    }
+    setRefreshing(false);
+  }, []);
 
   useEffect(() => {
-    const focusHandler = navigation.addListener('focus', () => {
-      Fetchcoursedata()
-      fetchLessonCounts()
+    const focusHandler = navigation.addListener("focus", () => {
+      setLoading(true);
+      Promise.all([Fetchcoursedata(), fetchLessonCounts()]).finally(() =>
+        setLoading(false)
+      );
     });
     return focusHandler;
-}, [navigation]);
+  }, [navigation]);
 
-const fetchLessonCounts = async () => {
-  try {
-    const courseData = await getAllCourses();
-    const counts = await Promise.all(
-      courseData.map(async (course) => {
-        const lessons = await getAllLessonsForCourse(course.id);
-        return lessons.length;
-      })
-    );
-    setLessonCounts(counts);
-  } catch (error) {
-    console.error("Error fetching lesson counts:", error);
-  }
-};
+  const fetchLessonCounts = async () => {
+    try {
+      const courseData = await getAllCourses();
+      const counts = await Promise.all(
+        courseData.map(async (course) => {
+          const lessons = await getAllLessonsForCourse(course.id);
+          return lessons.length;
+        })
+      );
+      setLessonCounts(counts);
+    } catch (error) {
+      console.error("Error fetching lesson counts:", error);
+    }
+  };
 
   const Fetchcoursedata = async () => {
     try {
       const fetch = await getAllCourses();
       setcoursedata(fetch);
-      console.log(fetch);
     } catch (err) {
-      console.log("show data", err);
+      console.error("Error fetching course data:", err);
     }
   };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  // console.log("Window width:", width);
-
   const renderitems = ({ item, index }) => {
+    const lessonCount = lessonCounts[index] || 0;
     return (
       <TouchableOpacity
-        className={`w-40 h-32 ${item.colour?item.colour:"bg-gray-300"} shadow-sm border border-gray-100 shadow-[#cddbe8] mx-2 rounded-md flex flex-col items-center justify-center `}
-        key={index}
-        onPress={()=>navigation.navigate("Lesson", { itemid: item.id })}
+        accessible={true}
+        accessibilityLabel={`${item.name} course with ${lessonCount} lessons`}
+        accessibilityHint="Double tap to view course details"
+        className="w-full mb-4 overflow-hidden px-4"
+        onPress={() => navigation.navigate("Lesson", { itemid: item.id })}
       >
-        <Text
-          className="py-1 w-24 text-center text-base text-blue-900"
-          numberOfLines={1}
+        <LinearGradient
+          colors={getGradientColors(item.colour)}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          className="p-4 rounded-xl shadow-sm border border-gray-300"
         >
-          {item.name}
-        </Text>
+          <View className="flex-row justify-between items-center">
+            <View className="flex-1">
+              <Text
+                className="text-lg font-semibold text-gray-800 mb-1"
+                numberOfLines={1}
+              >
+                {item.name}
+              </Text>
+              <Text className="text-sm text-gray-600">
+                {lessonCount} {lessonCount === 1 ? "Lesson" : "Lessons"}
+              </Text>
+            </View>
+            <View className="bg-white/30 p-2 rounded-full">
+              <AntDesign name="right" size={16} color="#4B5563" />
+            </View>
+          </View>
+        </LinearGradient>
       </TouchableOpacity>
     );
   };
 
   return (
-    <LinearGradient colors={["#dfe9f3", "#f8fbff"]} className="h-screen flex items-center justify-start">
-    {/* Profile Section */}
-    <View className="mt-12 flex items-center">
-      <View className="w-24 h-24 bg-white shadow-lg rounded-full flex items-center justify-center">
-        <Image
-          source={require(`../assets/Profile/Male.jpg`)}
-          className="w-20 h-20 rounded-full"
-        />
-      </View>
-      <Text className="text-lg text-gray-700 font-semibold py-2">Hey, John 👋</Text>
-    </View>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
 
-    {/* Action Buttons */}
-    <View className="w-full px-6 mt-8">
-
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate('OneClick')}
-        className="bg-white p-4 rounded-xl shadow-md flex-row items-center justify-between"
-      >
+      {/* Header */}
+      <View className="px-6 pt-4 pb-2 flex-row justify-between items-center bg-white border-b border-gray-100">
         <View className="flex-row items-center">
-          <View className="w-12 h-12 bg-indigo-100 rounded-full items-center justify-center mr-4">
-            <AntDesign name="home" size={24} color="#6366F1" />
+          <View className="mr-3  p-2 rounded-xl w-16 h-14 items-center justify-center">
+            <Image
+              source={require("../assets/AppIcon/icondemo.png")}
+              className="w-full h-full rounded-full"
+              resizeMode="cover"
+            />
           </View>
+
           <View>
-            <Text className="text-lg font-semibold text-gray-800">View Course</Text>
-            <Text className="text-sm text-gray-600">Explore course content</Text>
+            <Text className="text-2xl font-bold text-gray-800">
+              Create Your Course
+            </Text>
+            <Text className="text-base text-gray-600">Welcome back 👋</Text>
           </View>
         </View>
-        <AntDesign name="right" size={20} color="#4B5563" />
-      </TouchableOpacity>
-    </View>
-
-    {/* Heading */}
-    <View className="w-4/5 text-center mt-4">
-      <Text className="text-3xl font-extrabold text-center text-gray-800 leading-10">
-        What do you want to learn today?
-      </Text>
-    </View>
-
-    {/* Courses Section */}
-    <SafeAreaView className="mt-8 w-full px-6">
-      <View className="flex flex-row items-center justify-between">
-        <Text className="font-bold text-lg tracking-wide text-blue-900">Courses</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("OneClick")} className="flex flex-row items-center">
-          <Text className="text-blue-500 font-semibold">See all</Text>
-          <AntDesign name="right" size={16} color="#53a2ff" />
+        <TouchableOpacity
+          accessible={true}
+          accessibilityLabel="Logout button"
+          accessibilityHint="Double tap to log out of your account"
+          onPress={handleLogout}
+          className="p-2 rounded-full bg-gray-100"
+        >
+          <MaterialIcons name="logout" size={24} color="#4B5563" />
         </TouchableOpacity>
       </View>
 
-      {/* Course Cards */}
-      <View className="w-full h-52 mt-6">
-        <FlatList
-          data={coursedata}
-          renderItem={renderitems}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-        />
-      </View>
-    </SafeAreaView>
+      {/* Main Content */}
+      <FlatList
+        className="flex-1"
+        data={coursedata}
+        renderItem={renderitems}
+        keyExtractor={(item) => item.id.toString()}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#4B5563"]}
+            tintColor="#4B5563"
+          />
+        }
+        ListEmptyComponent={
+          !loading && (
+            <View className="flex-1 justify-center items-center py-8">
+              <Text className="text-gray-500 text-lg mb-2">No courses yet</Text>
+              <Text className="text-gray-400 text-base text-center px-4">
+                Start by adding your first course using the button below
+              </Text>
+            </View>
+          )
+        }
+      />
 
-    {/* Add Course Button */}
-    <TouchableOpacity
-      className="bg-[#53a2ff] hover:bg-blue-700 text-white w-20 h-20 shadow-lg rounded-full flex items-center justify-center mt-10"
-      onPress={() => navigation.navigate("CouresForm")}
-    >
-      <Feather name="plus" size={28} color="white" />
-    </TouchableOpacity>
-  </LinearGradient>
+      {/* Add Course FAB */}
+      <TouchableOpacity
+        accessible={true}
+        accessibilityLabel="Add new course"
+        accessibilityHint="Double tap to create a new course"
+        className="absolute bottom-6 right-6"
+        onPress={() => navigation.navigate("CouresForm")}
+      >
+        <View className="w-14 h-14 rounded-full bg-blue-500 shadow-lg justify-center items-center">
+          <Feather name="plus" size={24} color="white" />
+        </View>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }
-

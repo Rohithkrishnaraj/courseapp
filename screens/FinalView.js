@@ -27,6 +27,11 @@ import * as FileSystem from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import * as IntentLauncher from "expo-intent-launcher";
 import * as Speech from "expo-speech";
+import { LogBox } from 'react-native';
+
+LogBox.ignoreLogs([
+  'VirtualizedLists should never be nested', // Suppresses the warning
+]);
 
 const customerReviews = [
   { name: "John Doe", review: "Great service, highly recommended!" },
@@ -273,7 +278,7 @@ export default function FinalView({ route }) {
   };
 
   return (
-    <ScrollView className="w-full h-full ">
+    <ScrollView className="w-full h-full " nestedScrollEnabled={true}>
       <View className=" flex flex-col items-end ">
         <View className="flex flex-row items-center py-4 ">
           <View style={{ flexDirection: "row" }}>
@@ -307,6 +312,10 @@ export default function FinalView({ route }) {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 pagingEnabled
+                nestedScrollEnabled={true}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={5}
+                windowSize={5}
                 onScroll={(e) => {
                   const x = e.nativeEvent.contentOffset.x;
                   setSelectedIndex(Math.round(x / width));
@@ -382,15 +391,18 @@ export default function FinalView({ route }) {
                 ImageData.filter((audio) => audio.type === "audio/mpeg")
                   .length > 0 ? (
                   <View className="bg-gray-200 py-3 " style={{ height: 200 }}>
-                    <ScrollView className="h-full" nestedScrollEnabled={true}>
-                      <FlatList
-                        data={ImageData?.filter(
-                          (audio) => audio.type === "audio/mpeg"
-                        )}
-                        renderItem={AudiorenderItem}
-                        keyExtractor={(item) => `audio-${item.id}`}
-                      />
-                    </ScrollView>
+                    <FlatList
+                      data={ImageData?.filter(
+                        (audio) => audio.type === "audio/mpeg"
+                      )}
+                      renderItem={AudiorenderItem}
+                      keyExtractor={(item) => `audio-${item.id}`}
+                      scrollEnabled={true}
+                      nestedScrollEnabled={true}
+                      removeClippedSubviews={true}
+                      maxToRenderPerBatch={5}
+                      windowSize={5}
+                    />
                   </View>
                 ) : (
                   <View
@@ -433,6 +445,10 @@ export default function FinalView({ route }) {
                     keyExtractor={(item) => `file-${item.id}`}
                     horizontal
                     showsHorizontalScrollIndicator={false}
+                    nestedScrollEnabled={true}
+                    removeClippedSubviews={true}
+                    maxToRenderPerBatch={5}
+                    windowSize={5}
                   />
                 </View>
               ) : (
