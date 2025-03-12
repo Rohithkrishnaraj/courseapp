@@ -29,6 +29,8 @@ export default function UnitPreview({ route, navigation }) {
   const [selectedSongIndex, setSelectedSongIndex] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [allUnits, setAllUnits] = useState([]);
+  const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
 
   // Define documentTypes at component level
   const documentTypes = ['pdf', 'doc', 'docx', 'txt', 'application'];
@@ -45,6 +47,10 @@ export default function UnitPreview({ route, navigation }) {
     fetchUnitContent();
   }, [unitId]);
 
+  useEffect(() => {
+    fetchAllUnits();
+  }, [lessonId]);
+
   const fetchUnitContent = async () => {
     try {
       setLoading(true);
@@ -55,6 +61,17 @@ export default function UnitPreview({ route, navigation }) {
     } catch (error) {
       console.error('Error fetching unit content:', error);
       setLoading(false);
+    }
+  };
+
+  const fetchAllUnits = async () => {
+    try {
+      const units = await getAllUnitsForLesson(lessonId);
+      setAllUnits(units);
+      const currentIndex = units.findIndex(unit => unit.id === unitId);
+      setCurrentUnitIndex(currentIndex);
+    } catch (error) {
+      console.error("Error fetching units:", error);
     }
   };
 
@@ -150,6 +167,30 @@ export default function UnitPreview({ route, navigation }) {
     }
   };
 
+  const navigateToUnit = (unit) => {
+    if (sound) {
+      sound.unloadAsync();
+    }
+    navigation.replace("UnitPreview", {
+      unitId: unit.id,
+      lessonId: lessonId,
+      unitName: unit.name,
+      unitDescription: unit.description,
+    });
+  };
+
+  const goToNextUnit = () => {
+    if (currentUnitIndex < allUnits.length - 1) {
+      navigateToUnit(allUnits[currentUnitIndex + 1]);
+    }
+  };
+
+  const goToPreviousUnit = () => {
+    if (currentUnitIndex > 0) {
+      navigateToUnit(allUnits[currentUnitIndex - 1]);
+    }
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
@@ -173,9 +214,25 @@ export default function UnitPreview({ route, navigation }) {
             {/* Hero Section with Unit Title and Description */}
             <View className="bg-white mb-4">
               <View className="px-4 pt-6 pb-8 border-b border-gray-100">
-                <View className="flex-row items-center mb-4">
-                  <MaterialIcons name="school" size={28} color="#3B82F6" />
-                  <Text className="text-2xl font-bold text-gray-800 ml-3">{unitName}</Text>
+                <View className="flex-row items-center justify-between mb-4">
+                  <View className="flex-row items-center flex-1">
+                    <MaterialIcons name="school" size={28} color="#3B82F6" />
+                    <Text className="text-2xl font-bold text-gray-800 ml-3">{unitName}</Text>
+                  </View>
+                </View>
+                {/* Unit Progress Indicator */}
+                <View className="flex-row items-center justify-between mb-4">
+                  <Text className="text-sm text-gray-600">
+                    Unit {currentUnitIndex + 1} of {allUnits.length}
+                  </Text>
+                  <View className="flex-row items-center">
+                    <View className="h-1 w-24 bg-gray-200 rounded-full overflow-hidden">
+                      <View 
+                        className="h-1 bg-blue-500 rounded-full" 
+                        style={{ width: `${((currentUnitIndex + 1) / allUnits.length) * 100}%` }} 
+                      />
+                    </View>
+                  </View>
                 </View>
                 {unitDescription && (
                   <View className="mt-3">
@@ -382,6 +439,37 @@ export default function UnitPreview({ route, navigation }) {
           </View>
         )}
       />
+      
+      {/* Floating Navigation Buttons */}
+      <View className="absolute bottom-0 left-0 right-0 flex-row justify-between px-4 pb-6 pointer-events-none">
+        <TouchableOpacity
+          onPress={goToPreviousUnit}
+          disabled={currentUnitIndex === 0}
+          className={`w-12 h-12 rounded-full ${
+            currentUnitIndex === 0 ? 'bg-gray-200' : 'bg-blue-500'
+          } items-center justify-center shadow-lg pointer-events-auto`}
+        >
+          <MaterialIcons 
+            name="chevron-left" 
+            size={32} 
+            color={currentUnitIndex === 0 ? "#9CA3AF" : "#FFFFFF"} 
+          />
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          onPress={goToNextUnit}
+          disabled={currentUnitIndex === allUnits.length - 1}
+          className={`w-12 h-12 rounded-full ${
+            currentUnitIndex === allUnits.length - 1 ? 'bg-gray-200' : 'bg-blue-500'
+          } items-center justify-center shadow-lg pointer-events-auto`}
+        >
+          <MaterialIcons 
+            name="chevron-right" 
+            size={32} 
+            color={currentUnitIndex === allUnits.length - 1 ? "#9CA3AF" : "#FFFFFF"} 
+          />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }

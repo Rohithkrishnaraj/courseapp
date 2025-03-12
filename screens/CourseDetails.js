@@ -122,7 +122,8 @@ export default function CourseDetails({ route, navigation }) {
   }
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
+    <ScrollView className="flex-1 pt-5 bg-gray-50" showsVerticalScrollIndicator={false}
+    showsHorizontalScrollIndicator={false}>
       {/* Course Header */}
       <View className="bg-white shadow-sm">
         <View className="px-4 pt-6 pb-4">

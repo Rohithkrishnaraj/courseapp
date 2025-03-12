@@ -46,19 +46,67 @@ const insertCourse = async (name, description, colour, state, category = 'Develo
   });
 };
 
+const getCourseStatus = async (courseId) => {
+  return new Promise((resolve, reject) => {
+    db.transaction(async (tx) => {
+      // Get all units for all lessons in the course
+      tx.executeSql(
+        `SELECT u.state 
+         FROM units u 
+         INNER JOIN lessons l ON u.lesson = l.id 
+         WHERE l.course = ?`,
+        [courseId],
+        (_, result) => {
+          let totalUnits = result.rows.length;
+          if (totalUnits === 0) {
+            resolve('not_started');
+            return;
+          }
+
+          let completedUnits = 0;
+          for (let i = 0; i < result.rows.length; i++) {
+            if (result.rows.item(i).state === 'completed') {
+              completedUnits++;
+            }
+          }
+
+          if (completedUnits === 0) {
+            resolve('not_started');
+          } else if (completedUnits === totalUnits) {
+            resolve('completed');
+          } else {
+            resolve('in_progress');
+          }
+        },
+        (_, error) => {
+          reject(error);
+        }
+      );
+    });
+  });
+};
+
 const getAllCourses = async () => {
   return new Promise((resolve, reject) => {
-    db.transaction((tx) => {
+    db.transaction(async (tx) => {
       tx.executeSql(
         `SELECT * FROM courses`,
         [],
-        (_, result) => {
-          const courses = [];
-          for (let i = 0; i < result.rows.length; i++) {
-            const course = result.rows.item(i);
-            courses.push(course);
+        async (_, result) => {
+          try {
+            const courses = [];
+            for (let i = 0; i < result.rows.length; i++) {
+              const course = result.rows.item(i);
+              const status = await getCourseStatus(course.id);
+              courses.push({
+                ...course,
+                status
+              });
+            }
+            resolve(courses);
+          } catch (error) {
+            reject(error);
           }
-          resolve(courses);
         },
         (_, error) => {
           reject("getdata", error);
@@ -620,4 +668,5 @@ export {
   deleteUnit,
   updateUnit,
   migrateExistingCourses,
+  getCourseStatus,
 };

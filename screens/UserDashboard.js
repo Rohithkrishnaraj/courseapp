@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { getAllCourses, getAllLessonsForCourse } from "../DB/DbStorage";
+import { supabase } from "../lib/supabase";
 
 const UserDashboard = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,14 +24,31 @@ const UserDashboard = ({ navigation }) => {
   const [lessonCounts, setLessonCounts] = useState({});
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [categories, setCategories] = useState(["All"]);
+  const [userEmail, setUserEmail] = useState("");
   const coursesPerPage = 4;
 
   useEffect(() => {
+    getUserEmail();
     const focusHandler = navigation.addListener("focus", () => {
       fetchCourses();
     });
     return focusHandler;
   }, [navigation]);
+
+  const getUserEmail = async () => {
+    try {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (session) {
+        setUserEmail(session.user.email);
+      }
+    } catch (error) {
+      console.error("Error fetching user email:", error.message);
+    }
+  };
 
   const fetchCourses = async () => {
     try {
@@ -56,6 +74,7 @@ const UserDashboard = ({ navigation }) => {
         duration: "Not specified", // You might want to add duration to your database schema
         colour: course.colour,
         category: course.category,
+        status: course.status, // Assuming course.status is available in the database
       }));
 
       // Extract unique categories
@@ -185,7 +204,7 @@ const UserDashboard = ({ navigation }) => {
         <View className="flex-row items-center">
           <View className="mr-3  p-2 rounded-xl w-12 h-12 items-center justify-center">
             <Image
-              source={require("../assets/AppIcon/icondemo.png")}
+              source={require("../assets/icon.png")}
               className="w-full h-full rounded-full"
               resizeMode="cover"
             />
@@ -193,7 +212,7 @@ const UserDashboard = ({ navigation }) => {
           <View>
             <Text className="text-base text-gray-600">Welcome,</Text>
             <Text className="text-xl font-bold text-gray-800">
-              user@gmail.com
+            {userEmail || "Loading..."}
             </Text>
           </View>
         </View>
@@ -306,26 +325,45 @@ const UserDashboard = ({ navigation }) => {
                     {course.title}
                   </Text>
                   <Text className="text-sm text-gray-600 mb-3">
-  {course.description.length > 50
-    ? `${course.description.substring(0, 50)}...`
-    : course.description}
-</Text>
+                    {course.description.length > 50
+                      ? `${course.description.substring(0, 50)}...`
+                      : course.description}
+                  </Text>
 
-                  <View className="flex-row gap-4">
-                    <View className="flex-row items-center gap-1">
-                      <MaterialIcons name="book" size={16} color="#666" />
-                      <Text className="text-sm text-gray-600">
-                        {course.lessons} Lessons
-                      </Text>
-                    </View>
-                    {course.category && (
+                  <View className="flex-row items-center justify-between mb-3">
+                    <View className="flex-row gap-4">
                       <View className="flex-row items-center gap-1">
-                        <MaterialIcons name="category" size={16} color="#666" />
+                        <MaterialIcons name="book" size={16} color="#666" />
                         <Text className="text-sm text-gray-600">
-                          {course.category}
+                          {course.lessons} Lessons
                         </Text>
                       </View>
-                    )}
+                      {course.category && (
+                        <View className="flex-row items-center gap-1">
+                          <MaterialIcons name="category" size={16} color="#666" />
+                          <Text className="text-sm text-gray-600">
+                            {course.category}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    
+                    {/* Course Status Badge */}
+                    <View className={`px-3 py-1 rounded-full ${
+                      course.status === 'completed' ? 'bg-green-100' :
+                      course.status === 'in_progress' ? 'bg-yellow-100' :
+                      'bg-gray-100'
+                    }`}>
+                      <Text className={`text-sm font-medium ${
+                        course.status === 'completed' ? 'text-green-700' :
+                        course.status === 'in_progress' ? 'text-yellow-700' :
+                        'text-gray-700'
+                      }`}>
+                        {course.status === 'completed' ? 'Completed' :
+                         course.status === 'in_progress' ? 'In Progress' :
+                         'Not Started'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </TouchableOpacity>

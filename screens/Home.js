@@ -20,6 +20,7 @@ import { Feather } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { getAllCourses, getAllLessonsForCourse, deleteCourse as deleteCourseFromDB } from "../DB/DbStorage";
+import { supabase } from "../lib/supabase";
 
 const { width } = Dimensions.get("window");
 
@@ -52,6 +53,7 @@ export default function Home({ navigation, route }) {
   const [lessonCounts, setLessonCounts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState("");
 
   const handleLogout = () => {
     navigation.replace("Login");
@@ -68,6 +70,7 @@ export default function Home({ navigation, route }) {
   }, []);
 
   useEffect(() => {
+    getUserEmail();
     const focusHandler = navigation.addListener("focus", () => {
       setLoading(true);
       Promise.all([Fetchcoursedata(), fetchLessonCounts()]).finally(() =>
@@ -76,6 +79,21 @@ export default function Home({ navigation, route }) {
     });
     return focusHandler;
   }, [navigation]);
+
+  const getUserEmail = async () => {
+    try {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (session) {
+        setUserEmail(session.user.email);
+      }
+    } catch (error) {
+      console.error("Error fetching user email:", error.message);
+    }
+  };
 
   const fetchLessonCounts = async () => {
     try {
@@ -234,7 +252,7 @@ export default function Home({ navigation, route }) {
         <View className="flex-row items-center">
           <View className="mr-3  p-2 rounded-xl w-16 h-14 items-center justify-center">
             <Image
-              source={require("../assets/AppIcon/icondemo.png")}
+              source={require("../assets/icon.png")}
               className="w-full h-full rounded-full"
               resizeMode="cover"
             />
@@ -242,9 +260,9 @@ export default function Home({ navigation, route }) {
 
           <View>
             <Text className="text-2xl font-bold text-gray-800">
-              Create Your Course
+            Welcome back 👋 
             </Text>
-            <Text className="text-base text-gray-600">Welcome back 👋</Text>
+            <Text className="text-base text-gray-600">{userEmail || "Loading..."}</Text>
           </View>
         </View>
         <TouchableOpacity

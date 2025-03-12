@@ -40,6 +40,7 @@ import {
   UserDashboard,
   Course,
 } from "./screens";
+import SessionProvider from "./components/SessionProvider";
 
 const Stack = createNativeStackNavigator();
 
@@ -67,12 +68,17 @@ export default function App({}) {
   return (
     <SafeAreaView className="w-full h-full">
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen
-            name="Login"
-            component={Login}
-            options={{ headerShown: false }}
-          />
+        <Stack.Navigator
+          initialRouteName="Session"
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen name="Session" component={SessionProvider} />
+          <Stack.Screen name="Login" component={Login} />
+          <Stack.Screen name="Signup" component={Signup} />
+          <Stack.Screen name="Home" component={Home} />
+          <Stack.Screen name="UserDashboard" component={UserDashboard} />
           <Stack.Screen
             name="Course"
             component={Course}
@@ -114,23 +120,13 @@ export default function App({}) {
             })}
           />
           <Stack.Screen
-            name="Signup"
-            component={Signup}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Home"
-            component={Home}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
             name="LearningDashboard"
             component={LearningDashboard}
             options={{
               headerTitle: "My Learning",
               headerShadowVisible: false,
               headerStyle: {
-                backgroundColor: '#F9FAFB',
+                backgroundColor: "#F9FAFB",
               },
             }}
           />
@@ -141,7 +137,7 @@ export default function App({}) {
               headerTitle: "Course Details",
               headerShadowVisible: false,
               headerStyle: {
-                backgroundColor: '#F9FAFB',
+                backgroundColor: "#F9FAFB",
               },
             }}
           />
@@ -189,7 +185,7 @@ export default function App({}) {
             name="Lesson"
             component={Lesson}
             options={{
-              headerTitle: "Lessons"
+              headerTitle: "Lessons",
             }}
           />
           <Stack.Screen
@@ -218,18 +214,13 @@ export default function App({}) {
             options={{ headerTitle: "Content" }}
           />
           <Stack.Screen
-            name="UserDashboard"
-            component={UserDashboard}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
             name="UnitPreview"
             component={UnitPreview}
             options={{
               headerTitle: "Unit Content",
               headerShadowVisible: false,
               headerStyle: {
-                backgroundColor: '#F9FAFB',
+                backgroundColor: "#F9FAFB",
               },
             }}
           />
